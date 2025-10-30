@@ -21,7 +21,7 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-// 5x7 pixel font for digits and symbols
+// 5x7 pixel font for digits and symbols (1 = filled pixel, 0 = empty)
 const font = {
   '0':[[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1]],
   '1':[[0,0,1,0,0],[0,1,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
@@ -122,7 +122,7 @@ function buildLevel() {
   
   // Goal flag
   goal = scene.physics.add.sprite(750, 500, 'flag');
-  goal.body.setAllowGravity(false);
+  if (goal.body) goal.body.setAllowGravity(false);
   
   cleared = false;
 }
@@ -190,7 +190,7 @@ function reachGoal() {
     repeat: -1
   });
   
-  scene.time.delayedCall(2000, buildLevel);
+  scene.time.delayedCall(2000, () => buildLevel());
 }
 
 function update() {
