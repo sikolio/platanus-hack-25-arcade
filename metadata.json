@@ -1,4 +1,4 @@
 {
-  "game_name": "Time Cross",
-  "description": "Race across platforms made from the current time and date! Reach the goal before the minute changes. Every minute brings a new procedurally-generated level."
+  "game_name": "Time Cross +",
+  "description": "Enhanced time-based platformer with multiple display modes! Navigate dynamic time platforms with animated seconds, moving hazards, and oscillating tiles. Clear levels to cycle through PIXEL, SEVEN_SEG, ROMAN, and MORSE modes. High scores persist via localStorage. Race against the clock!"
 }
