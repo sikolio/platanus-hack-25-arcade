@@ -262,7 +262,7 @@ function drawDisplay(text, startX, startY, plat, coins, animated) {
       continue;
     }
     
-    if (mode === 'MORSE') {
+    if (mode === 'MORSE' && (c === '0' || c === '1')) {
       x = drawMorse(c, x, startY, plat, coins, animated);
     } else if (mode === 'PIXEL' || mode === 'ROMAN') {
       x = drawPixel(c, x, startY, plat, coins, animated);
