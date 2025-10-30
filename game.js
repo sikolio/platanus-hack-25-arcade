@@ -101,6 +101,14 @@ function create() {
   this.input.keyboard.on('keydown-ENTER', togglePause);
   this.input.keyboard.on('keydown-ESC', togglePause);
   
+  // Add WASD keys
+  const wasd = {
+    up: this.input.keyboard.addKey('W'),
+    left: this.input.keyboard.addKey('A'),
+    right: this.input.keyboard.addKey('D')
+  };
+  cursors.wasd = wasd;
+  
   // Create beveled textures
   const gfx = this.add.graphics();
   
@@ -153,12 +161,16 @@ function create() {
   // Build level
   buildLevel();
   
+  // Set world bounds for horizontal scrolling
+  this.physics.world.setBounds(0, 0, 2000, 600);
+  
   // Player
   player = this.physics.add.sprite(50, 100, 'player');
   player.setBounce(0.1);
-  player.setCollideWorldBounds(true);
+  player.setCollideWorldBounds(false);
   
   // Camera follow - horizontal only with easing
+  this.cameras.main.setBounds(0, 0, 2000, 600);
   this.cameras.main.startFollow(player, false, 0.08, 0.05);
   this.cameras.main.setDeadzone(200, 600);
   
@@ -644,15 +656,15 @@ function update() {
   }
   
   // Player control
-  if (cursors.left.isDown) {
+  if (cursors.left.isDown || cursors.wasd.left.isDown) {
     player.setVelocityX(-200);
-  } else if (cursors.right.isDown) {
+  } else if (cursors.right.isDown || cursors.wasd.right.isDown) {
     player.setVelocityX(200);
   } else {
     player.setVelocityX(0);
   }
   
-  if (cursors.up.isDown && player.body.touching.down) {
+  if ((cursors.up.isDown || cursors.wasd.up.isDown) && player.body.touching.down) {
     player.setVelocityY(-400);
     playTone(660, 0.05);
   }
