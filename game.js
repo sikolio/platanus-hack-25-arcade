@@ -190,6 +190,12 @@ function buildLevel() {
   animTiles.forEach(t => t.destroy());
   animTiles = [];
   
+  // Reset player position and velocity
+  if (player) {
+    player.setPosition(50, 100);
+    player.setVelocity(0, 0);
+  }
+  
   const now = new Date();
   currentMinute = now.getMinutes();
   currentSecond = now.getSeconds();
