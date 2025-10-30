@@ -83,6 +83,7 @@ let currentMinute, currentSecond, currentCentisecond, timeText, dateText, scoreT
 let scene, levelStartTime, playTimeTotal = 0, minutesCleared = 0;
 let animTiles = [];
 let isPaused = false, pauseMenu;
+let occupiedAreas = [];
 
 function create() {
   scene = this;
@@ -112,14 +113,19 @@ function create() {
   // Create beveled textures
   const gfx = this.add.graphics();
   
-  // Player with bevel
-  gfx.fillStyle(0x006644, 1);
-  gfx.fillRect(0, 20, 20, 2);
-  gfx.fillStyle(0x00ff88, 1);
-  gfx.fillRect(0, 0, 20, 20);
-  gfx.fillStyle(0x00ffaa, 1);
-  gfx.fillRect(0, 0, 18, 2);
-  gfx.fillRect(0, 0, 2, 18);
+  // Monkey character
+  gfx.fillStyle(0x8B4513, 1);
+  gfx.fillCircle(10, 11, 9);
+  gfx.fillStyle(0xD2691E, 1);
+  gfx.fillCircle(10, 12, 6);
+  gfx.fillStyle(0x8B4513, 1);
+  gfx.fillCircle(5, 6, 3);
+  gfx.fillCircle(15, 6, 3);
+  gfx.fillStyle(0xD2691E, 1);
+  gfx.fillCircle(5, 7, 2);
+  gfx.fillCircle(15, 7, 2);
+  gfx.fillStyle(0x8B4513, 1);
+  gfx.fillRect(17, 11, 2, 8);
   gfx.generateTexture('player', 20, 22);
   
   gfx.clear();
@@ -130,16 +136,16 @@ function create() {
   gfx.generateTexture('coin', 12, 12);
   
   gfx.clear();
-  gfx.fillStyle(0xff0044, 1);
-  gfx.fillRect(0, 0, 8, 40);
-  gfx.fillStyle(0xff6688, 1);
+  gfx.fillStyle(0xFFD700, 1);
   gfx.beginPath();
-  gfx.moveTo(8, 0);
-  gfx.lineTo(40, 15);
-  gfx.lineTo(8, 30);
+  gfx.arc(15, 20, 8, -Math.PI * 0.3, Math.PI * 1.3, false);
+  gfx.arc(15, 20, 12, Math.PI * 1.3, -Math.PI * 0.3, true);
   gfx.closePath();
   gfx.fillPath();
-  gfx.generateTexture('flag', 40, 40);
+  gfx.fillStyle(0x8B4513, 1);
+  gfx.fillRect(4, 18, 3, 4);
+  gfx.fillRect(23, 18, 3, 4);
+  gfx.generateTexture('flag', 30, 40);
   
   // Hazard
   gfx.clear();
@@ -162,15 +168,25 @@ function create() {
   buildLevel();
   
   // Set world bounds for horizontal scrolling
-  this.physics.world.setBounds(0, 0, 2000, 600);
+  this.physics.world.setBounds(0, 0, 4000, 600);
   
   // Player
   player = this.physics.add.sprite(50, 100, 'player');
   player.setBounce(0.1);
   player.setCollideWorldBounds(false);
   
+  // Add subtle bounce animation to monkey
+  this.tweens.add({
+    targets: player,
+    scaleY: 1.05,
+    duration: 300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+  
   // Camera follow - horizontal only with easing
-  this.cameras.main.setBounds(0, 0, 2000, 600);
+  this.cameras.main.setBounds(0, 0, 4000, 600);
   this.cameras.main.startFollow(player, false, 0.08, 0.05);
   this.cameras.main.setDeadzone(200, 600);
   
@@ -189,6 +205,10 @@ function buildLevel() {
   if (goal) goal.destroy();
   animTiles.forEach(t => t.destroy());
   animTiles = [];
+  occupiedAreas = [];
+  
+  // Reserve spawn area
+  occupiedAreas.push({x: 50, y: 100, w: 100, h: 100});
   
   // Reset player position and velocity
   if (player) {
@@ -227,6 +247,7 @@ function buildLevel() {
   // Start platform
   const startPlat = scene.add.rectangle(50, 130, 80, 20, 0x4466ff);
   platforms.add(startPlat);
+  markOccupied(50, 130, 80, 20);
   
   let x = 140;
   const baseY = 300;
@@ -235,50 +256,105 @@ function buildLevel() {
   const timeStr = formatTime(h, m);
   x = drawHorizontalDisplay(timeStr, x, baseY - 50, platforms, collectibles, false);
   
-  // Add some ramps and gaps
-  x += 30;
+  // Add more spacing and platforms
+  x += 50;
   const ramp1 = createRamp(x, baseY, platforms);
-  x += 100;
+  x += 150;
   
   // Gap with collectible
-  const coin1 = scene.physics.add.sprite(x + 25, baseY - 40, 'coin');
-  coin1.body.setAllowGravity(false);
-  collectibles.add(coin1);
-  x += 50;
+  if (!checkOverlap(x + 25, baseY - 40, 12, 12)) {
+    const coin1 = scene.physics.add.sprite(x + 25, baseY - 40, 'coin');
+    coin1.body.setAllowGravity(false);
+    collectibles.add(coin1);
+    markOccupied(x + 25, baseY - 40, 12, 12);
+  }
+  x += 80;
+  
+  // Add extra platform section
+  const midPlat1 = scene.add.rectangle(x, baseY - 10, 70, 15, 0x6688ff);
+  platforms.add(midPlat1);
+  markOccupied(x, baseY - 10, 70, 15);
+  x += 120;
   
   // Seconds section - dynamic centisecond-driven challenge
-  x += 20;
+  x += 30;
   x = drawDynamicSeconds(s, x, baseY, platforms, collectibles, hazards);
   
-  // More gaps with height changes
-  x += 40;
-  const plat1 = scene.add.rectangle(x, baseY + 30, 60, 15, 0x44ff66);
-  platforms.add(plat1);
-  x += 80;
+  // More gaps with height changes and spacing
+  x += 60;
+  if (!checkOverlap(x, baseY + 30, 60, 15)) {
+    const plat1 = scene.add.rectangle(x, baseY + 30, 60, 15, 0x44ff66);
+    platforms.add(plat1);
+    markOccupied(x, baseY + 30, 60, 15);
+  }
+  x += 120;
   
-  const plat2 = scene.add.rectangle(x, baseY - 20, 60, 15, 0x44ff66);
-  platforms.add(plat2);
-  x += 80;
+  if (!checkOverlap(x, baseY - 20, 60, 15)) {
+    const plat2 = scene.add.rectangle(x, baseY - 20, 60, 15, 0x44ff66);
+    platforms.add(plat2);
+    markOccupied(x, baseY - 20, 60, 15);
+  }
+  x += 120;
+  
+  // Additional mid-section platforms for expanded world
+  const midPlat2 = scene.add.rectangle(x, baseY + 40, 80, 15, 0x6688ff);
+  platforms.add(midPlat2);
+  markOccupied(x, baseY + 40, 80, 15);
+  x += 140;
+  
+  const midPlat3 = scene.add.rectangle(x, baseY - 30, 70, 15, 0x6688ff);
+  platforms.add(midPlat3);
+  markOccupied(x, baseY - 30, 70, 15);
+  x += 130;
   
   // Date section - stable ending
-  x += 20;
+  x += 30;
   const dateStr = formatDate(y, mo, d);
   x = drawHorizontalDisplay(dateStr, x, baseY + 20, platforms, collectibles, true);
   
   // Final platforms leading to goal
-  x += 40;
+  x += 60;
   const finalPlat = scene.add.rectangle(x, baseY, 80, 20, 0x4466ff);
   platforms.add(finalPlat);
-  x += 100;
+  markOccupied(x, baseY, 80, 20);
+  x += 150;
+  
+  // Reserve goal area
+  markOccupied(x, baseY - 30, 40, 40);
   
   // Goal flag - guaranteed reachable
   goal = scene.physics.add.sprite(x, baseY - 30, 'flag');
   if (goal.body) goal.body.setAllowGravity(false);
   
+  // Add wobble animation to banana
+  scene.tweens.add({
+    targets: goal,
+    angle: -10,
+    duration: 400,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+  
   // Ensure continuous path by adding safety platforms if needed
   ensureContinuousPath();
   
   cleared = false;
+}
+
+function checkOverlap(x, y, w, h) {
+  const margin = 5;
+  for (let area of occupiedAreas) {
+    if (!(x + w + margin < area.x || x - margin > area.x + area.w || 
+          y + h + margin < area.y || y - margin > area.y + area.h)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function markOccupied(x, y, w, h) {
+  occupiedAreas.push({x: x - w/2, y: y - h/2, w: w, h: h});
 }
 
 function createRamp(x, y, plat) {
@@ -292,7 +368,7 @@ function createRamp(x, y, plat) {
 
 function ensureContinuousPath() {
   // Add a continuous ground path at the bottom as a safety net
-  for (let i = 0; i < 2000; i += 100) {
+  for (let i = 0; i < 4000; i += 100) {
     const safePlat = scene.add.rectangle(i, 550, 100, 30, 0x333344);
     safePlat.setAlpha(0.3);
     platforms.add(safePlat);
@@ -444,15 +520,34 @@ function drawDynamicSeconds(s, x, y, plat, coins, haz) {
             plat.add(tile);
             animTiles.push(tile);
             
-            // Oscillate based on centiseconds
+            // Increased amplitude (25-50% more = 20 * 1.4 = 28)
+            const amp = 28 + Math.sin(row + col) * 15;
+            // Increased speed (20-35% faster = 800 * 0.75 = 600)
+            const dur = 600 + (row + col) * 40;
+            // Phase offset for desynchronization
+            const phase = (row * 137 + col * 97) % 360;
+            
             scene.tweens.add({
               targets: tile,
-              y: py + Math.sin(row + col) * 20,
-              alpha: 0.6 + Math.sin(row + col) * 0.4,
-              duration: 800 + (row + col) * 50,
+              y: py + Math.sin(row + col) * amp,
+              alpha: 0.4 + Math.sin(row + col) * 0.3,
+              duration: dur,
               yoyo: true,
               repeat: -1,
-              ease: 'Sine.easeInOut'
+              ease: 'Sine.easeInOut',
+              delay: phase
+            });
+            
+            // Add brief disappearance (200ms off state)
+            scene.time.addEvent({
+              delay: 1500 + (row + col) * 100,
+              callback: () => {
+                tile.setAlpha(0);
+                scene.time.delayedCall(200, () => {
+                  tile.setAlpha(0.6);
+                });
+              },
+              loop: true
             });
             
             rowStart = -1;
@@ -467,14 +562,30 @@ function drawDynamicSeconds(s, x, y, plat, coins, haz) {
         plat.add(tile);
         animTiles.push(tile);
         
+        const amp = 28 + Math.sin(row) * 15;
+        const dur = 600 + row * 40;
+        const phase = (row * 137) % 360;
+        
         scene.tweens.add({
           targets: tile,
-          y: py + Math.sin(row) * 20,
-          alpha: 0.6 + Math.sin(row) * 0.4,
-          duration: 800 + row * 50,
+          y: py + Math.sin(row) * amp,
+          alpha: 0.4 + Math.sin(row) * 0.3,
+          duration: dur,
           yoyo: true,
           repeat: -1,
-          ease: 'Sine.easeInOut'
+          ease: 'Sine.easeInOut',
+          delay: phase
+        });
+        
+        scene.time.addEvent({
+          delay: 1500 + row * 100,
+          callback: () => {
+            tile.setAlpha(0);
+            scene.time.delayedCall(200, () => {
+              tile.setAlpha(0.6);
+            });
+          },
+          loop: true
         });
       }
     }
@@ -491,7 +602,7 @@ function drawDynamicSeconds(s, x, y, plat, coins, haz) {
     scene.tweens.add({
       targets: hazard,
       x: hazard.x + 80,
-      duration: 1500 + j * 300,
+      duration: 1100 + j * 250,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
@@ -507,7 +618,7 @@ function drawDynamicSeconds(s, x, y, plat, coins, haz) {
     scene.tweens.add({
       targets: coin,
       y: coin.y + 30,
-      duration: 1000,
+      duration: 750,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
@@ -590,28 +701,11 @@ function reachGoal() {
   
   playTone(1200, 0.2);
   
-  // Flash effect
-  scene.cameras.main.flash(500, 100, 255, 100);
+  // Bright green flash
+  scene.cameras.main.flash(200, 0, 255, 0);
   
-  const msg = scene.add.text(400, 300, 'CLEARED!\n+1 MINUTE\nNEW MODE: ' + MODES[currentMode], {
-    fontSize: '48px',
-    color: '#00ff88',
-    stroke: '#000',
-    strokeThickness: 6,
-    align: 'center'
-  }).setOrigin(0.5);
-  
-  scene.tweens.add({
-    targets: msg,
-    scale: 1.2,
-    alpha: 0.8,
-    duration: 500,
-    yoyo: true,
-    repeat: 3
-  });
-  
-  scene.time.delayedCall(3000, () => {
-    msg.destroy();
+  // Immediately rebuild level
+  scene.time.delayedCall(200, () => {
     buildLevel();
   });
 }
@@ -639,7 +733,7 @@ function update() {
   
   // Check for minute change
   if (now.getMinutes() !== currentMinute) {
-    scene.cameras.main.shake(200, 0.008);
+    scene.cameras.main.shake(150, 0.004);
     scene.cameras.main.flash(150, 255, 150, 150);
     playTone(440, 0.15);
     
@@ -656,8 +750,8 @@ function update() {
     currentSecond = s;
   }
   
-  // Fall detection - respawn if below camera view
-  if (player.y > scene.cameras.main.scrollY + 650) {
+  // Fall detection - respawn if below bottom boundary
+  if (player.y > 600) {
     respawnPlayer();
   }
   
@@ -746,12 +840,15 @@ function togglePause() {
 }
 
 function respawnPlayer() {
-  player.setPosition(50, 100);
-  player.setVelocity(0, 0);
-  score = Math.max(0, score - 5);
-  scoreText.setText('Score: ' + score);
-  playTone(330, 0.15);
-  scene.cameras.main.flash(100, 255, 0, 0);
+  scene.cameras.main.fade(150, 0, 0, 0);
+  scene.time.delayedCall(150, () => {
+    player.setPosition(50, 100);
+    player.setVelocity(0, 0);
+    score = Math.max(0, score - 5);
+    scoreText.setText('Score: ' + score);
+    playTone(330, 0.15);
+    scene.cameras.main.fadeIn(150);
+  });
 }
 
 function updateDynamicElements(cs) {
