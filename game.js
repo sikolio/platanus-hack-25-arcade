@@ -166,39 +166,19 @@ function create() {
   
   // Build level
   buildLevel();
-  
-  // Set world bounds for horizontal scrolling
-  this.physics.world.setBounds(0, 0, 4000, 600);
-  
-  // Player
-  player = this.physics.add.sprite(50, 100, 'player');
-  player.setBounce(0.1);
-  player.setCollideWorldBounds(false);
-  
-  // Add subtle bounce animation to monkey
-  this.tweens.add({
-    targets: player,
-    scaleY: 1.05,
-    duration: 300,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.easeInOut'
-  });
-  
-  // Camera follow - horizontal only with easing
-  this.cameras.main.setBounds(0, 0, 4000, 600);
-  this.cameras.main.startFollow(player, false, 0.08, 0.05);
-  this.cameras.main.setDeadzone(200, 600);
-  
-  // Collisions
-  this.physics.add.collider(player, platforms);
-  this.physics.add.overlap(player, collectibles, collectCoin, null, this);
-  this.physics.add.overlap(player, goal, reachGoal, null, this);
-  this.physics.add.overlap(player, hazards, hitHazard, null, this);
 }
 
 function buildLevel() {
-  // Clear old level
+  // Safe restart sequence to prevent collision issues
+  
+  // 1. Stop timers & tweens
+  scene.time.removeAllEvents();
+  scene.tweens.killAll();
+  
+  // 2. Clear colliders
+  scene.physics.world.colliders.destroy();
+  
+  // 3. Destroy old objects/groups
   if (platforms) platforms.clear(true, true);
   if (collectibles) collectibles.clear(true, true);
   if (hazards) hazards.clear(true, true);
@@ -207,14 +187,17 @@ function buildLevel() {
   animTiles = [];
   occupiedAreas = [];
   
+  // Destroy old player
+  if (player) player.destroy();
+  
+  // 4. Resume physics (if paused)
+  scene.physics.world.resume();
+  
+  // 5. Recreate world settings
+  scene.physics.world.setBounds(0, 0, 4000, 600);
+  
   // Reserve spawn area
   occupiedAreas.push({x: 50, y: 100, w: 100, h: 100});
-  
-  // Reset player position and velocity
-  if (player) {
-    player.setPosition(50, 100);
-    player.setVelocity(0, 0);
-  }
   
   const now = new Date();
   currentMinute = now.getMinutes();
@@ -239,6 +222,7 @@ function buildLevel() {
   modeText.setText('MODE: ' + MODES[currentMode]);
   statsText.setText('Cleared: ' + minutesCleared + ' | Play: ' + Math.floor(playTimeTotal / 1000) + 's');
   
+  // 6. Rebuild groups/tiles
   platforms = scene.physics.add.staticGroup();
   collectibles = scene.physics.add.group();
   hazards = scene.physics.add.group();
@@ -338,6 +322,45 @@ function buildLevel() {
   
   // Ensure continuous path by adding safety platforms if needed
   ensureContinuousPath();
+  
+  // 7. REFRESH static bodies after all placement
+  platforms.refresh();
+  
+  // 8. Recreate the player
+  player = scene.physics.add.sprite(50, 100, 'player');
+  player.setBounce(0.1);
+  player.setCollideWorldBounds(false);
+  
+  // Add subtle bounce animation to monkey
+  scene.tweens.add({
+    targets: player,
+    scaleY: 1.05,
+    duration: 300,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+  
+  // Reset camera follow
+  scene.cameras.main.setBounds(0, 0, 4000, 600);
+  scene.cameras.main.startFollow(player, false, 0.08, 0.05);
+  scene.cameras.main.setDeadzone(200, 600);
+  
+  // 9. Re-add colliders/overlaps
+  scene.physics.add.collider(player, platforms);
+  scene.physics.add.overlap(player, collectibles, collectCoin, null, scene);
+  scene.physics.add.overlap(player, goal, reachGoal, null, scene);
+  scene.physics.add.overlap(player, hazards, hitHazard, null, scene);
+  
+  // 10. Post-update diagnostic check
+  scene.events.once('postupdate', () => {
+    if (!player.body) return;
+    const ok = scene.physics.world.colliders.getActive().length > 0;
+    // Force a refresh if player is falling on first frame
+    if (!ok || !player.body.blocked.down) {
+      platforms.refresh();
+    }
+  });
   
   cleared = false;
 }
@@ -821,7 +844,18 @@ function togglePause() {
     const rKey = scene.input.keyboard.addKey('R');
     rKey.once('down', () => {
       if (isPaused) {
-        togglePause();
+        // First unpause, then rebuild
+        isPaused = false;
+        
+        // Remove pause menu
+        if (pauseMenu) {
+          pauseMenu.bg.destroy();
+          pauseMenu.title.destroy();
+          pauseMenu.continueBtn.destroy();
+          pauseMenu.restartBtn.destroy();
+          pauseMenu = null;
+        }
+        
         buildLevel();
       }
     });
