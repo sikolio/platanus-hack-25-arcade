@@ -324,7 +324,11 @@ function buildLevel() {
   ensureContinuousPath();
   
   // 7. REFRESH static bodies after all placement
-  platforms.refresh();
+  platforms.children.iterate((child) => {
+    if (child.body) {
+      child.body.updateFromGameObject();
+    }
+  });
   
   // 8. Recreate the player
   player = scene.physics.add.sprite(50, 100, 'player');
@@ -358,7 +362,11 @@ function buildLevel() {
     const ok = scene.physics.world.colliders.getActive().length > 0;
     // Force a refresh if player is falling on first frame
     if (!ok || !player.body.blocked.down) {
-      platforms.refresh();
+      platforms.children.iterate((child) => {
+        if (child.body) {
+          child.body.updateFromGameObject();
+        }
+      });
     }
   });
   
