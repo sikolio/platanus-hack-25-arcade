@@ -1,4 +1,4 @@
 {
-  "game_name": "Time Cross +",
-  "description": "Enhanced time-based platformer with horizontal scrolling! Navigate dynamic platforms with centisecond-driven challenges. Features: Fixed HUD, smooth camera following, pause menu (Enter/ESC), WASD+Arrow controls, auto-respawn on falls. Clear levels to cycle through PIXEL, SEVEN_SEG, ROMAN, and MORSE display modes. Progress saves to localStorage!"
+  "game_name": "Monkey Time Cross",
+  "description": "Time-based platformer with a banana-loving monkey! Navigate dynamic platforms across an expanded world. Features procedural monkey character with animations, banana goal with wobble, harder moving sections with disappearing platforms, instant respawn on falls, and smooth camera. Clear levels with green flash to cycle through PIXEL, SEVEN_SEG, ROMAN, and MORSE modes!"
 }
