@@ -38,7 +38,13 @@ const pixFont = {
   '8':[[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1]],
   '9':[[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[0,0,0,0,1],[0,0,0,0,1],[1,1,1,1,1]],
   ':':[[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]],
-  '-':[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
+  '-':[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
+  '/':[[0,0,0,0,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+  'I':[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],
+  'V':[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0]],
+  'X':[[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1],[1,0,0,0,1]],
+  'L':[[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  'C':[[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]]
 };
 
 // Seven-segment display patterns
@@ -256,16 +262,57 @@ function drawDisplay(text, startX, startY, plat, coins, animated) {
       continue;
     }
     
-    if (mode === 'PIXEL') {
+    if (mode === 'MORSE') {
+      x = drawMorse(c, x, startY, plat, coins, animated);
+    } else if (mode === 'PIXEL' || mode === 'ROMAN') {
       x = drawPixel(c, x, startY, plat, coins, animated);
     } else if (mode === 'SEVEN_SEG') {
       x = drawSevenSeg(c, x, startY, plat, coins, animated);
-    } else if (mode === 'ROMAN' || mode === 'MORSE') {
-      x = drawPixel(c, x, startY, plat, coins, animated);
     }
     
     x += 10;
   }
+}
+
+function drawMorse(c, x, y, plat, coins, anim) {
+  // For morse: 0 = dot, 1 = dash
+  if (c === '0') {
+    // Draw dot (small circle)
+    const tile = scene.add.rectangle(x, y + 28, 8, 8, 0xffaa44);
+    plat.add(tile);
+    
+    if (anim) {
+      animTiles.push(tile);
+      scene.tweens.add({
+        targets: tile,
+        scale: 1.3,
+        duration: 600,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+    
+    return x + 15;
+  } else if (c === '1') {
+    // Draw dash (rectangle)
+    const tile = scene.add.rectangle(x + 8, y + 28, 20, 8, 0xffaa44);
+    plat.add(tile);
+    
+    if (anim) {
+      animTiles.push(tile);
+      scene.tweens.add({
+        targets: tile,
+        alpha: 0.7,
+        duration: 800,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+    
+    return x + 30;
+  }
+  
+  return x;
 }
 
 function drawPixel(c, x, y, plat, coins, anim) {
@@ -288,7 +335,19 @@ function drawPixel(c, x, y, plat, coins, anim) {
         
         plat.add(tile);
         
-        if (anim) {
+        // Pulse colons
+        if (c === ':') {
+          animTiles.push(tile);
+          scene.tweens.add({
+            targets: tile,
+            alpha: 0.5,
+            scale: 1.2,
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+          });
+        } else if (anim) {
           animTiles.push(tile);
           scene.tweens.add({
             targets: tile,
